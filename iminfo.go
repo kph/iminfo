@@ -15,6 +15,10 @@ func gatherConfiguration(c *fdt.Node) {
 }
 
 func gatherConfigurations(n *fdt.Node) {
+	for name, value := range n.Properties {
+		fmt.Printf("%s: %s = %q\n", n.Name, name, value)
+	}
+
 	for _, c := range n.Children {
 		if strings.Contains(c.Name, "conf") {
 			gatherConfiguration(c)
