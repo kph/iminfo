@@ -42,6 +42,24 @@ func gatherImages(t *fdt.Tree, kernel string, fdt string, ramdisk string) {
 	}
 }
 
+func parseConfiguration(n *fdt.Node) {
+	def, ok := n.Properties["default"]
+	if !ok {
+		panic("Can't find default node")
+	}
+	fmt.Printf("parseConfiguration %s: %q\n", n.Name, def)
+
+	defstr := strings.Split(string(def), "\x00")[0]
+	
+	conf,ok := n.Children[defstr]
+
+	if !ok {
+		panic("Can't find default configuration")
+	}
+
+	gatherConfiguration(conf)
+}
+
 func main() {
 	b, err := ioutil.ReadFile(os.Args[1])
 	if err != nil {
@@ -57,6 +75,16 @@ func main() {
 	}
 
 	if true {
+		for name, value := range t.RootNode.Properties {
+			fmt.Printf("foo %s: %s = %q\n", t.RootNode.Name, name, value)
+		}
+
+		for _, c := range t.RootNode.Children {
+			fmt.Printf("bar %s\n", c.Name)
+		}
+
+		parseConfiguration(t.RootNode.Children["configurations"])
+		
 		t.MatchNode("configurations", gatherConfigurations)
 		gatherImages(t, "kernel@1", "fdt@1", "ramdisk@1")
 	}
