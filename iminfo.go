@@ -49,7 +49,7 @@ func parseConfiguration(n *fdt.Node) {
 	}
 	fmt.Printf("parseConfiguration %s: %q\n", n.Name, def)
 
-	defstr := strings.Split(string(def), "\x00")[0]
+	defstr := string(def[0:len(def)-1])
 	
 	conf,ok := n.Children[defstr]
 
