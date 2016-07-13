@@ -8,9 +8,9 @@ import (
 	"strings"
 )
 
-func gatherConfiguration(c *fdt.Node) {
-	for name, value := range c.Properties {
-		fmt.Printf("%s: %s = %q\n", c.Name, name, value)
+func gatherConfiguration(n *fdt.Node) {
+	for name, value := range n.Properties {
+		fmt.Printf("%s: %s = %q\n", n.Name, name, value)
 	}
 }
 
@@ -20,9 +20,15 @@ func gatherConfigurations(n *fdt.Node) {
 	}
 
 	for _, c := range n.Children {
-		if strings.Contains(c.Name, "conf") {
+		if strings.HasPrefix(c.Name, "conf") {
 			gatherConfiguration(c)
 		}
+	}
+}
+
+func gatherHashes(n *fdt.Node) {
+	for name, value := range n.Properties {
+		fmt.Printf("%s: %s = %q\n", n.Name, name, value)
 	}
 }
 
@@ -30,6 +36,11 @@ func gatherImage(n *fdt.Node) {
 	for name, value := range n.Properties {
 		if name != "data" {
 			fmt.Printf("%s: %s = %q\n", n.Name, name, value)
+		}
+	}
+	for _, c := range n.Children {
+		if strings.HasPrefix(c.Name, "hash") {
+			gatherHashes(c)
 		}
 	}
 }
