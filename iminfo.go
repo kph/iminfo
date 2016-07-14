@@ -1,3 +1,4 @@
+// Package main parses image tree blob files.
 package main
 
 import (
@@ -30,7 +31,8 @@ func gatherConfigurations(n *fdt.Node) {
 	}
 }
 
-func gatherHashes(n *fdt.Node, data []byte) {
+// validateHashes takes a hash node, and attempts to validate it. It takes
+func validateHashes(n *fdt.Node, data []byte) {
 	for name, value := range n.Properties {
 		fmt.Printf("%s: %s = %q\n", n.Name, name, value)
 	}
@@ -78,7 +80,7 @@ func gatherImage(n *fdt.Node) {
 	}
 	for _, c := range n.Children {
 		if strings.HasPrefix(c.Name, "hash") {
-			gatherHashes(c, data)
+			validateHashes(c, data)
 		}
 	}
 }
@@ -109,6 +111,17 @@ func parseConfiguration(n *fdt.Node) {
 	gatherConfiguration(conf)
 }
 
+// DumpRoot blah blah blah.
+func DumpRoot(t *fdt.Tree) {
+	for name, value := range t.RootNode.Properties {
+		fmt.Printf("Root %s: %s = %q\n", t.RootNode.Name, name, value)
+	}
+
+	for _, c := range t.RootNode.Children {
+		fmt.Printf("Root %s\n", c.Name)
+	}
+}
+
 func main() {
 	b, err := ioutil.ReadFile(os.Args[1])
 	if err != nil {
@@ -124,14 +137,7 @@ func main() {
 	}
 
 	if true {
-		for name, value := range t.RootNode.Properties {
-			fmt.Printf("foo %s: %s = %q\n", t.RootNode.Name, name, value)
-		}
-
-		for _, c := range t.RootNode.Children {
-			fmt.Printf("bar %s\n", c.Name)
-		}
-
+		DumpRoot(t)
 		parseConfiguration(t.RootNode.Children["configurations"])
 		
 		t.MatchNode("configurations", gatherConfigurations)
