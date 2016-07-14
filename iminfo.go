@@ -1,10 +1,14 @@
 package main
 
 import (
+	"bytes"
+	"encoding/binary"
+	"hash/crc32"
 	"github.com/platinasystems/fdt"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"crypto/sha1"
 	"strings"
 )
 
@@ -26,9 +30,39 @@ func gatherConfigurations(n *fdt.Node) {
 	}
 }
 
-func gatherHashes(n *fdt.Node) {
+func gatherHashes(n *fdt.Node, data []byte) {
 	for name, value := range n.Properties {
 		fmt.Printf("%s: %s = %q\n", n.Name, name, value)
+	}
+
+	algo,ok := n.Properties["algo"]
+	if !ok {
+		panic("algo property missing")
+	}
+
+	value,ok := n.Properties["value"]
+	if !ok {
+		panic("value property missing")
+	}
+
+	algostr := string(algo[0:len(algo)-1])
+
+	if algostr == "sha1" {
+		fmt.Print("Algo is sha1\n")
+		shasum := sha1.Sum(data)
+		shaslice := shasum[:]
+		if bytes.Equal(value, shaslice) {
+			fmt.Printf("sha1 correct: %v!\n", value)
+		}
+	}
+
+	if algostr == "crc32" {
+		fmt.Print("Algo is crc32\n")
+		calcsum := crc32.ChecksumIEEE(data)
+		propsum := binary.BigEndian.Uint32(value)
+		if calcsum == propsum {
+			fmt.Printf("crc32 correct: %d!\n", propsum);
+		}
 	}
 }
 
@@ -38,9 +72,13 @@ func gatherImage(n *fdt.Node) {
 			fmt.Printf("%s: %s = %q\n", n.Name, name, value)
 		}
 	}
+	data,ok := n.Properties["data"]
+	if !ok {
+		panic("Can't find data property")
+	}
 	for _, c := range n.Children {
 		if strings.HasPrefix(c.Name, "hash") {
-			gatherHashes(c)
+			gatherHashes(c, data)
 		}
 	}
 }
