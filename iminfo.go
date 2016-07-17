@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"hash/crc32"
+	"errors"
 	"github.com/platinasystems/fdt"
 	"fmt"
 	"io/ioutil"
@@ -31,41 +32,49 @@ func debugDumpNode(n *fdt.Node) {
 }
 
 // validateHashes takes a hash node, and attempts to validate it. It takes
-func validateHashes(n *fdt.Node, data []byte) {
+func validateHashes(n *fdt.Node, data []byte) (err error) {
 	debugDumpProperties(n)
 	
 	algo,ok := n.Properties["algo"]
 	if !ok {
-		panic("algo property missing")
+		return errors.New("algo property missing")
 	}
 
 	value,ok := n.Properties["value"]
 	if !ok {
-		panic("value property missing")
+		return errors.New("value property missing")
 	}
 
 	algostr := string(algo[0:len(algo)-1])
 
 	if algostr == "sha1" {
-		fmt.Print("Algo is sha1\n")
 		shasum := sha1.Sum(data)
 		shaslice := shasum[:]
-		if bytes.Equal(value, shaslice) {
-			fmt.Printf("sha1 correct: %v!\n", value)
+		fmt.Printf("Checking sha1 %v... ", value)
+		if !bytes.Equal(value, shaslice) {
+			fmt.Printf("error, calculated %v!\n", shaslice)
+			return fmt.Errorf("sha1 incorrect, expected %v! calculated %v!\n", value, shaslice)
 		}
+		fmt.Print("OK!\n")
+		return
 	}
 
 	if algostr == "crc32" {
-		fmt.Print("Algo is crc32\n")
-		calcsum := crc32.ChecksumIEEE(data)
 		propsum := binary.BigEndian.Uint32(value)
-		if calcsum == propsum {
-			fmt.Printf("crc32 correct: %d!\n", propsum);
+		fmt.Printf("Checking crc32 %d... ", propsum)
+		calcsum := crc32.ChecksumIEEE(data)
+		if calcsum != propsum {
+			fmt.Printf("incorrect, expected %d calculated %d", propsum, calcsum)
+			return fmt.Errorf("crc32 incorrect, expected %d calculated %d", propsum, calcsum)
 		}
+		fmt.Printf("OK!\n")
+		return
 	}
+
+	return
 }
 
-func gatherImage(n *fdt.Node) {
+func gatherImage(n *fdt.Node) (err error) {
 	for name, value := range n.Properties {
 		if name != "data" {
 			fmt.Printf("%s: %s = %q\n", n.Name, name, value)
@@ -73,27 +82,36 @@ func gatherImage(n *fdt.Node) {
 	}
 	data,ok := n.Properties["data"]
 	if !ok {
-		panic("Can't find data property")
+		return errors.New("data property missing")
 	}
+
 	for _, c := range n.Children {
 		if strings.HasPrefix(c.Name, "hash") {
-			validateHashes(c, data)
+			err = validateHashes(c, data)
+			if err != nil {
+				return err
+			}
 		}
 	}
+	return
+}
+
+func gatherImageHelper(n *fdt.Node) {
+	gatherImage(n)
 }
 
 func gatherImages(t *fdt.Tree, kernel string, fdt string, ramdisk string) {
-	t.MatchNode(kernel, gatherImage)
-	t.MatchNode(fdt, gatherImage)
+	t.MatchNode(kernel, gatherImageHelper)
+	t.MatchNode(fdt, gatherImageHelper)
 	if ramdisk != "" {
-		t.MatchNode(ramdisk, gatherImage)
+		t.MatchNode(ramdisk, gatherImageHelper)
 	}
 }
 
-func parseConfiguration(n *fdt.Node) {
+func parseConfiguration(n *fdt.Node) (error) {
 	def, ok := n.Properties["default"]
 	if !ok {
-		panic("Can't find default node")
+		return errors.New("Can't find default node")
 	}
 	fmt.Printf("parseConfiguration %s: %q\n", n.Name, def)
 
@@ -102,10 +120,12 @@ func parseConfiguration(n *fdt.Node) {
 	conf,ok := n.Children[defstr]
 
 	if !ok {
-		panic("Can't find default configuration")
+		return errors.New("Can't find default configuration")
 	}
 
 	debugDumpNode(conf)
+
+	return nil
 }
 
 // DumpRoot blah blah blah.
