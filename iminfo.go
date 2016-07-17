@@ -13,30 +13,27 @@ import (
 	"strings"
 )
 
-func gatherConfiguration(n *fdt.Node) {
+func debugDumpProperties(n *fdt.Node) {
 	for name, value := range n.Properties {
 		fmt.Printf("%s: %s = %q\n", n.Name, name, value)
 	}
 }
 
-func gatherConfigurations(n *fdt.Node) {
-	for name, value := range n.Properties {
-		fmt.Printf("%s: %s = %q\n", n.Name, name, value)
-	}
+func debugDumpNode(n *fdt.Node) {
+
+	debugDumpProperties(n)
 
 	for _, c := range n.Children {
 		if strings.HasPrefix(c.Name, "conf") {
-			gatherConfiguration(c)
+			debugDumpProperties(c)
 		}
 	}
 }
 
 // validateHashes takes a hash node, and attempts to validate it. It takes
 func validateHashes(n *fdt.Node, data []byte) {
-	for name, value := range n.Properties {
-		fmt.Printf("%s: %s = %q\n", n.Name, name, value)
-	}
-
+	debugDumpProperties(n)
+	
 	algo,ok := n.Properties["algo"]
 	if !ok {
 		panic("algo property missing")
@@ -108,18 +105,12 @@ func parseConfiguration(n *fdt.Node) {
 		panic("Can't find default configuration")
 	}
 
-	gatherConfiguration(conf)
+	debugDumpNode(conf)
 }
 
 // DumpRoot blah blah blah.
 func DumpRoot(t *fdt.Tree) {
-	for name, value := range t.RootNode.Properties {
-		fmt.Printf("Root %s: %s = %q\n", t.RootNode.Name, name, value)
-	}
-
-	for _, c := range t.RootNode.Children {
-		fmt.Printf("Root %s\n", c.Name)
-	}
+	debugDumpNode(t.RootNode)
 }
 
 func main() {
@@ -140,7 +131,7 @@ func main() {
 		DumpRoot(t)
 		parseConfiguration(t.RootNode.Children["configurations"])
 		
-		t.MatchNode("configurations", gatherConfigurations)
+		t.MatchNode("configurations", debugDumpNode)
 		gatherImages(t, "kernel@1", "fdt@1", "ramdisk@1")
 	}
 
