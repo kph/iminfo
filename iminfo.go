@@ -31,6 +31,11 @@ func debugDumpNode(n *fdt.Node) {
 	}
 }
 
+func nodeToString(b []byte) (s string) {
+	return strings.Split(string(b), "\x00")[0]
+}
+
+
 // validateHashes takes a hash node, and attempts to validate it. It takes
 func validateHashes(n *fdt.Node, data []byte) (err error) {
 	debugDumpProperties(n)
@@ -45,7 +50,7 @@ func validateHashes(n *fdt.Node, data []byte) (err error) {
 		return errors.New("value property missing")
 	}
 
-	algostr := string(algo[0:len(algo)-1])
+	algostr := nodeToString(algo)
 
 	if algostr == "sha1" {
 		shasum := sha1.Sum(data)
@@ -108,22 +113,35 @@ func gatherImages(t *fdt.Tree, kernel string, fdt string, ramdisk string) {
 	}
 }
 
-func parseConfiguration(n *fdt.Node) (error) {
-	def, ok := n.Properties["default"]
-	if !ok {
-		return errors.New("Can't find default node")
-	}
-	fmt.Printf("parseConfiguration %s: %q\n", n.Name, def)
+func parseConfiguration(n *fdt.Node, whichconf string) (error) {
+	if (whichconf == "") {
+		def, ok := n.Properties["default"]
 
-	defstr := string(def[0:len(def)-1])
-	
-	conf,ok := n.Children[defstr]
+		if !ok {
+			return errors.New("Can't find default node")
+		}
 
-	if !ok {
-		return errors.New("Can't find default configuration")
+		whichconf = nodeToString(def)
 	}
 
-	debugDumpNode(conf)
+	fmt.Printf("parseConfiguration %s: %q\n", n.Name, whichconf)
+
+	conf,ok := n.Children[whichconf]
+
+	if !ok {
+		return fmt.Errorf("Can't find configuration %s", whichconf)
+	}
+
+	description := conf.Properties["description"]
+	if description != nil {
+		fmt.Printf("parseConfiguration %s: %s\n", whichconf, nodeToString(description))
+	}
+
+	kernel := conf.Properties["kernel"]
+	fdt := conf.Properties["fdt"]
+	ramdisk := conf.Properties["ramdisk"]
+
+	fmt.Printf("parseConfiguration kernel=%s fdt=%s ramdisk=%s\n", nodeToString(kernel), nodeToString(fdt), nodeToString(ramdisk))
 
 	return nil
 }
@@ -149,7 +167,7 @@ func main() {
 
 	if true {
 		DumpRoot(t)
-		parseConfiguration(t.RootNode.Children["configurations"])
+		parseConfiguration(t.RootNode.Children["configurations"], "")
 		
 		t.MatchNode("configurations", debugDumpNode)
 		gatherImages(t, "kernel@1", "fdt@1", "ramdisk@1")
