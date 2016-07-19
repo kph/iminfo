@@ -96,32 +96,6 @@ func validateHashes(n *fdt.Node) (err error) {
 	return nil;
 }
 
-func gatherImage(n *fdt.Node) (err error) {
-	for name, value := range n.Properties {
-		if name != "data" {
-			fmt.Printf("[DEBUG]%s: %s = %q\n", n.Name, name, value)
-		}
-	}
-	data,ok := n.Properties["data"]
-	if !ok {
-		return errors.New("data property missing")
-	}
-
-	for _, c := range n.Children {
-		if strings.HasPrefix(c.Name, "hash") {
-			err = validateHash(c, data)
-			if err != nil {
-				return err
-			}
-		}
-	}
-	return
-}
-
-func gatherImageHelper(n *fdt.Node) {
-	gatherImage(n)
-}
-
 func validateImages(images *fdt.Node, kernel string, fdt string, ramdisk string) {
 	nKernel := images.Children[kernel]
 	nFdt := images.Children[fdt]
