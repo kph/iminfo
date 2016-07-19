@@ -9,6 +9,7 @@ import (
 	"github.com/platinasystems/fdt"
 	"fmt"
 	"io/ioutil"
+	"crypto/md5"
 	"os"
 	"crypto/sha1"
 	"strings"
@@ -52,10 +53,10 @@ func validateHash(n *fdt.Node, data []byte) (err error) {
 
 	algostr := nodeToString(algo)
 
+	fmt.Printf("Checking %s %v... ", algostr, value)
 	if algostr == "sha1" {
 		shasum := sha1.Sum(data)
 		shaslice := shasum[:]
-		fmt.Printf("Checking sha1 %v... ", value)
 		if !bytes.Equal(value, shaslice) {
 			fmt.Printf("error, calculated %v!\n", shaslice)
 			return fmt.Errorf("sha1 incorrect, expected %v! calculated %v!\n", value, shaslice)
@@ -66,7 +67,6 @@ func validateHash(n *fdt.Node, data []byte) (err error) {
 
 	if algostr == "crc32" {
 		propsum := binary.BigEndian.Uint32(value)
-		fmt.Printf("Checking crc32 %d... ", propsum)
 		calcsum := crc32.ChecksumIEEE(data)
 		if calcsum != propsum {
 			fmt.Printf("incorrect, expected %d calculated %d", propsum, calcsum)
@@ -76,7 +76,18 @@ func validateHash(n *fdt.Node, data []byte) (err error) {
 		return
 	}
 
-	fmt.Printf("Unknown algorithm %s: %v\n", algostr, value)
+	if algostr == "md5" {
+		md5sum := md5.Sum(data)
+		md5slice := md5sum[:]
+		if !bytes.Equal(value, md5slice) {
+			fmt.Printf("error, calculated %v!\n", md5slice)
+			return fmt.Errorf("sha1 incorrect, expected %v! calculated %v!\n", value, md5slice)
+		}
+		fmt.Print("OK!\n")
+		return
+	}
+
+	fmt.Printf("Unknown algorithm!\n")
 	return
 }
 
