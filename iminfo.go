@@ -79,6 +79,23 @@ func validateHash(n *fdt.Node, data []byte) (err error) {
 	return
 }
 
+func validateHashes(n *fdt.Node) (err error) {
+	data,ok := n.Properties["data"]
+	if !ok {
+		return errors.New("data property missing")
+	}
+
+	for _, c := range n.Children {
+		if c.Name == "hash" || strings.HasPrefix(c.Name, "hash@") {
+			err = validateHash(c, data)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil;
+}
+
 func gatherImage(n *fdt.Node) (err error) {
 	for name, value := range n.Properties {
 		if name != "data" {
@@ -105,20 +122,22 @@ func gatherImageHelper(n *fdt.Node) {
 	gatherImage(n)
 }
 
-func gatherImages(t *fdt.Tree, kernel string, fdt string, ramdisk string) {
-	t.MatchNode(kernel, gatherImageHelper)
-	t.MatchNode(fdt, gatherImageHelper)
-	if ramdisk != "" {
-		t.MatchNode(ramdisk, gatherImageHelper)
-	}
+func validateImages(images *fdt.Node, kernel string, fdt string, ramdisk string) {
+	nKernel := images.Children[kernel]
+	nFdt := images.Children[fdt]
+	nRamdisk := images.Children[ramdisk]
+	
+	validateHashes(nKernel)
+	validateHashes(nFdt)
+	validateHashes(nRamdisk)
 }
 
-func parseConfiguration(n *fdt.Node, whichconf string) (error) {
+func parseConfiguration(n *fdt.Node, whichconf string) (kernel string, fdt string, ramdisk string, err error) {
 	if (whichconf == "") {
 		def, ok := n.Properties["default"]
 
 		if !ok {
-			return errors.New("Can't find default node")
+			return "", "", "", errors.New("Can't find default node")
 		}
 
 		whichconf = nodeToString(def)
@@ -129,7 +148,7 @@ func parseConfiguration(n *fdt.Node, whichconf string) (error) {
 	conf,ok := n.Children[whichconf]
 
 	if !ok {
-		return fmt.Errorf("Can't find configuration %s", whichconf)
+		return "", "", "", fmt.Errorf("Can't find configuration %s", whichconf)
 	}
 
 	description := conf.Properties["description"]
@@ -137,13 +156,13 @@ func parseConfiguration(n *fdt.Node, whichconf string) (error) {
 		fmt.Printf("parseConfiguration %s: %s\n", whichconf, nodeToString(description))
 	}
 
-	kernel := conf.Properties["kernel"]
-	fdt := conf.Properties["fdt"]
-	ramdisk := conf.Properties["ramdisk"]
+	kernel = nodeToString(conf.Properties["kernel"])
+	fdt = nodeToString(conf.Properties["fdt"])
+	ramdisk = nodeToString(conf.Properties["ramdisk"])
 
-	fmt.Printf("parseConfiguration kernel=%s fdt=%s ramdisk=%s\n", nodeToString(kernel), nodeToString(fdt), nodeToString(ramdisk))
+	fmt.Printf("parseConfiguration kernel=%s fdt=%s ramdisk=%s\n", kernel, fdt, ramdisk)
 
-	return nil
+	return kernel, fdt, ramdisk, nil
 }
 
 // DumpRoot blah blah blah.
@@ -165,10 +184,13 @@ func main() {
 	}
 
 	DumpRoot(t)
-	parseConfiguration(t.RootNode.Children["configurations"], "")
+	configurations := t.RootNode.Children["configurations"]
+	images := t.RootNode.Children["images"]
+
+	kernel, fdt, ramdisk, err := parseConfiguration(configurations, "")
 		
 	t.MatchNode("configurations", debugDumpNode)
-	gatherImages(t, "kernel@1", "fdt@1", "ramdisk@1")
+	validateImages(images, kernel, fdt, ramdisk)
 
 	fmt.Printf("Hello Universe!\n")
 }
