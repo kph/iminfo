@@ -76,6 +76,7 @@ func validateHash(n *fdt.Node, data []byte) (err error) {
 		return
 	}
 
+	fmt.Printf("Unknown algorithm %s: %v\n", algostr, value)
 	return
 }
 
