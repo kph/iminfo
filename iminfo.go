@@ -36,8 +36,8 @@ func nodeToString(b []byte) (s string) {
 }
 
 
-// validateHashes takes a hash node, and attempts to validate it. It takes
-func validateHashes(n *fdt.Node, data []byte) (err error) {
+// validateHash takes a hash node, and attempts to validate it. It takes
+func validateHash(n *fdt.Node, data []byte) (err error) {
 	debugDumpProperties(n)
 	
 	algo,ok := n.Properties["algo"]
@@ -92,7 +92,7 @@ func gatherImage(n *fdt.Node) (err error) {
 
 	for _, c := range n.Children {
 		if strings.HasPrefix(c.Name, "hash") {
-			err = validateHashes(c, data)
+			err = validateHash(c, data)
 			if err != nil {
 				return err
 			}
