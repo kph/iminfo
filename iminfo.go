@@ -16,7 +16,7 @@ import (
 
 func debugDumpProperties(n *fdt.Node) {
 	for name, value := range n.Properties {
-		fmt.Printf("%s: %s = %q\n", n.Name, name, value)
+		fmt.Printf("[DEBUG]%s: %s = %q\n", n.Name, name, value)
 	}
 }
 
@@ -82,7 +82,7 @@ func validateHash(n *fdt.Node, data []byte) (err error) {
 func gatherImage(n *fdt.Node) (err error) {
 	for name, value := range n.Properties {
 		if name != "data" {
-			fmt.Printf("%s: %s = %q\n", n.Name, name, value)
+			fmt.Printf("[DEBUG]%s: %s = %q\n", n.Name, name, value)
 		}
 	}
 	data,ok := n.Properties["data"]
