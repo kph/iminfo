@@ -158,20 +158,17 @@ func main() {
 	}
 
 	t := &fdt.Tree{Debug: false, IsLittleEndian: false}
-	t.Parse(b)
+	err = t.Parse(b)
 
-	if false {
-		fmt.Printf("%v\n", t)
-		panic(t)
+	if err != nil {
+		panic(err)
 	}
 
-	if true {
-		DumpRoot(t)
-		parseConfiguration(t.RootNode.Children["configurations"], "")
+	DumpRoot(t)
+	parseConfiguration(t.RootNode.Children["configurations"], "")
 		
-		t.MatchNode("configurations", debugDumpNode)
-		gatherImages(t, "kernel@1", "fdt@1", "ramdisk@1")
-	}
+	t.MatchNode("configurations", debugDumpNode)
+	gatherImages(t, "kernel@1", "fdt@1", "ramdisk@1")
 
 	fmt.Printf("Hello Universe!\n")
 }
