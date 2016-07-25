@@ -145,7 +145,10 @@ func parseImage(n *fdt.Node, imageList *[]*Image, imageName string) {
 	*imageList = append(*imageList, i)
 }
 
-func parseConfiguration(conf *fdt.Node, images *fdt.Node, whichconf string) (imageList []*Image, err error) {
+func (f *Fit) parseConfiguration(whichconf string) (imageList []*Image, err error) {
+	conf := f.fdt.RootNode.Children["configurations"]
+	images := f.fdt.RootNode.Children["images"]
+
 	if (whichconf == "") {
 		def, ok := conf.Properties["default"]
 
@@ -210,10 +213,8 @@ func main() {
 	}
 
 	DumpRoot(fit.fdt)
-	configurations := fit.fdt.RootNode.Children["configurations"]
-	images := fit.fdt.RootNode.Children["images"]
 
-	imageList, err := parseConfiguration(configurations, images, "")
+	imageList, err := fit.parseConfiguration("")
 		
 	listImages(imageList)
 
