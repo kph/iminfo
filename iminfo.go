@@ -118,17 +118,7 @@ func validateHashes(n *fdt.Node) (err error) {
 	return nil
 }
 
-func validateImages(images *fdt.Node, kernel string, fdt string, ramdisk string) {
-	nKernel := images.Children[kernel]
-	nFdt := images.Children[fdt]
-	nRamdisk := images.Children[ramdisk]
-	
-	validateHashes(nKernel)
-	validateHashes(nFdt)
-	validateHashes(nRamdisk)
-}
-
-func parseImage(n *fdt.Node, imageList *[]*Image, imageName string) {
+func (f *Fit)parseImage(n *fdt.Node, imageList *[]*Image, imageName string) {
 	node,ok := n.Children[imageName]
 	if !ok {
 		return
@@ -138,6 +128,11 @@ func parseImage(n *fdt.Node, imageList *[]*Image, imageName string) {
 	i.Name = imageName
 	i.Type = nodeToString(node.Properties["type"])
 	i.Arch = nodeToString(node.Properties["arch"])
+
+	err := validateHashes(node)
+	if err != nil {
+		panic(err)
+	}
 	//i.Load = node.Properties["load"]
 	//i.Entry = node.Properties["entry"]
 	//i.Len = len(node.Properties["data"])
@@ -180,9 +175,9 @@ func (f *Fit) parseConfiguration(whichconf string) (imageList []*Image, err erro
 
 	fmt.Printf("parseConfiguration kernel=%s fdt=%s ramdisk=%s\n", kernel, fdt, ramdisk)
 
-	parseImage(images, &imageList, kernel)
-	parseImage(images, &imageList, fdt)
-	parseImage(images, &imageList, ramdisk)
+	f.parseImage(images, &imageList, kernel)
+	f.parseImage(images, &imageList, fdt)
+	f.parseImage(images, &imageList, ramdisk)
 
 	return imageList, nil
 }
@@ -219,7 +214,6 @@ func main() {
 	listImages(imageList)
 
 	fit.fdt.MatchNode("configurations", debugDumpNode)
-	//validateImages(images, kernel, fdt, ramdisk)
 
 	fmt.Printf("Hello Universe!\n")
 }
