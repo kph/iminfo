@@ -3,7 +3,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/binary"
 	"hash/crc32"
 	"errors"
 	"github.com/platinasystems/fdt"
@@ -48,7 +47,7 @@ func nodeToString(b []byte) (s string) {
 
 
 // validateHash takes a hash node, and attempts to validate it. It takes
-func validateHash(n *fdt.Node, data []byte) (err error) {
+func (f *Fit)validateHash(n *fdt.Node, data []byte) (err error) {
 	debugDumpProperties(n)
 	
 	algo,ok := n.Properties["algo"]
@@ -76,7 +75,7 @@ func validateHash(n *fdt.Node, data []byte) (err error) {
 	}
 
 	if algostr == "crc32" {
-		propsum := binary.BigEndian.Uint32(value)
+		propsum := f.fdt.PropUint32(value)
 		calcsum := crc32.ChecksumIEEE(data)
 		if calcsum != propsum {
 			fmt.Printf("incorrect, expected %d calculated %d", propsum, calcsum)
@@ -101,7 +100,7 @@ func validateHash(n *fdt.Node, data []byte) (err error) {
 	return
 }
 
-func validateHashes(n *fdt.Node) (err error) {
+func (f *Fit)validateHashes(n *fdt.Node) (err error) {
 	data,ok := n.Properties["data"]
 	if !ok {
 		return errors.New("data property missing")
@@ -109,7 +108,7 @@ func validateHashes(n *fdt.Node) (err error) {
 
 	for _, c := range n.Children {
 		if c.Name == "hash" || strings.HasPrefix(c.Name, "hash@") {
-			err = validateHash(c, data)
+			err = f.validateHash(c, data)
 			if err != nil {
 				return err
 			}
@@ -129,7 +128,7 @@ func (f *Fit)parseImage(n *fdt.Node, imageList *[]*Image, imageName string) {
 	i.Type = nodeToString(node.Properties["type"])
 	i.Arch = nodeToString(node.Properties["arch"])
 
-	err := validateHashes(node)
+	err := f.validateHashes(node)
 	if err != nil {
 		panic(err)
 	}
