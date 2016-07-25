@@ -60,7 +60,7 @@ func (f *Fit)validateHash(n *fdt.Node, data []byte) (err error) {
 		return errors.New("value property missing")
 	}
 
-	algostr := nodeToString(algo)
+	algostr := f.fdt.PropString(algo)
 
 	fmt.Printf("Checking %s %v... ", algostr, value)
 	if algostr == "sha1" {
@@ -125,8 +125,8 @@ func (f *Fit)parseImage(n *fdt.Node, imageList *[]*Image, imageName string) {
 
 	i := &Image{}
 	i.Name = imageName
-	i.Type = nodeToString(node.Properties["type"])
-	i.Arch = nodeToString(node.Properties["arch"])
+	i.Type = f.fdt.PropString(node.Properties["type"])
+	i.Arch = f.fdt.PropString(node.Properties["arch"])
 
 	err := f.validateHashes(node)
 	if err != nil {
@@ -150,7 +150,7 @@ func (f *Fit) parseConfiguration(whichconf string) (imageList []*Image, err erro
 			return nil, errors.New("Can't find default node")
 		}
 
-		whichconf = nodeToString(def)
+		whichconf = f.fdt.PropString(def)
 	}
 
 	fmt.Printf("parseConfiguration %s: %q\n", conf.Name, whichconf)
@@ -163,14 +163,14 @@ func (f *Fit) parseConfiguration(whichconf string) (imageList []*Image, err erro
 
 	description := conf.Properties["description"]
 	if description != nil {
-		fmt.Printf("parseConfiguration %s: %s\n", whichconf, nodeToString(description))
+		fmt.Printf("parseConfiguration %s: %s\n", whichconf, f.fdt.PropString(description))
 	}
 
 	imageList = []*Image{}
 
-	kernel := nodeToString(conf.Properties["kernel"])
-	fdt := nodeToString(conf.Properties["fdt"])
-	ramdisk := nodeToString(conf.Properties["ramdisk"])
+	kernel := f.fdt.PropString(conf.Properties["kernel"])
+	fdt := f.fdt.PropString(conf.Properties["fdt"])
+	ramdisk := f.fdt.PropString(conf.Properties["ramdisk"])
 
 	fmt.Printf("parseConfiguration kernel=%s fdt=%s ramdisk=%s\n", kernel, fdt, ramdisk)
 
