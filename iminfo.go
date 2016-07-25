@@ -15,6 +15,10 @@ import (
 	"strings"
 )
 
+type Fit struct {
+	fdt	*fdt.Tree
+}
+
 type Image struct {
 	Name	string
 	Type	string
@@ -197,22 +201,23 @@ func main() {
 		panic(err)
 	}
 
-	t := &fdt.Tree{Debug: false, IsLittleEndian: false}
-	err = t.Parse(b)
+	fit := Fit{}
+	fit.fdt = &fdt.Tree{Debug: false, IsLittleEndian: false}
+	err = fit.fdt.Parse(b)
 
 	if err != nil {
 		panic(err)
 	}
 
-	DumpRoot(t)
-	configurations := t.RootNode.Children["configurations"]
-	images := t.RootNode.Children["images"]
+	DumpRoot(fit.fdt)
+	configurations := fit.fdt.RootNode.Children["configurations"]
+	images := fit.fdt.RootNode.Children["images"]
 
 	imageList, err := parseConfiguration(configurations, images, "")
 		
 	listImages(imageList)
 
-	t.MatchNode("configurations", debugDumpNode)
+	fit.fdt.MatchNode("configurations", debugDumpNode)
 	//validateImages(images, kernel, fdt, ramdisk)
 
 	fmt.Printf("Hello Universe!\n")
