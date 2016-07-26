@@ -42,20 +42,20 @@ func debugDumpNode(n *fdt.Node) {
 	}
 }
 
+func (f *Fit)getProperty(n *fdt.Node, propName string) ([]byte) {
+	if val, ok := n.Properties[propName]; ok {
+		return val
+	}
+
+	panic(fmt.Errorf("Required property %s missing\n", propName))
+}
+
 // validateHash takes a hash node, and attempts to validate it. It takes
 func (f *Fit)validateHash(n *fdt.Node, i *Image) (err error) {
 	debugDumpProperties(n)
 	
-	algo,ok := n.Properties["algo"]
-	if !ok {
-		return errors.New("algo property missing")
-	}
-
-	value,ok := n.Properties["value"]
-	if !ok {
-		return errors.New("value property missing")
-	}
-
+	algo := f.getProperty(n, "algo")
+	value := f.getProperty(n, "value")
 	algostr := f.fdt.PropString(algo)
 
 	fmt.Printf("Checking %s %v... ", algostr, value)
