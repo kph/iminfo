@@ -41,11 +41,6 @@ func debugDumpNode(n *fdt.Node) {
 	}
 }
 
-func nodeToString(b []byte) (s string) {
-	return strings.Split(string(b), "\x00")[0]
-}
-
-
 // validateHash takes a hash node, and attempts to validate it. It takes
 func (f *Fit)validateHash(n *fdt.Node, data []byte) (err error) {
 	debugDumpProperties(n)
