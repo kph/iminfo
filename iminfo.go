@@ -116,9 +116,9 @@ func (f *Fit)parseImage(n *fdt.Node, imageList *[]*Image, imageName string) {
 
 	i := &Image{}
 	i.Name = imageName
-	i.Type = f.fdt.PropString(node.Properties["type"])
-	i.Arch = f.fdt.PropString(node.Properties["arch"])
-	i.Data = node.Properties["data"]
+	i.Type = f.fdt.PropString(f.getProperty(node, "type"))
+	i.Arch = f.fdt.PropString(f.getProperty(node, "arch"))
+	i.Data = f.getProperty(node, "data")
 
 	err := f.validateHashes(node, i)
 	if err != nil {
