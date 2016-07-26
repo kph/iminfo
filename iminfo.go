@@ -22,6 +22,7 @@ type Image struct {
 	Name	string
 	Type	string
 	Arch	string
+	Data	[]byte
 }
 
 func debugDumpProperties(n *fdt.Node) {
@@ -42,7 +43,7 @@ func debugDumpNode(n *fdt.Node) {
 }
 
 // validateHash takes a hash node, and attempts to validate it. It takes
-func (f *Fit)validateHash(n *fdt.Node, data []byte) (err error) {
+func (f *Fit)validateHash(n *fdt.Node, i *Image) (err error) {
 	debugDumpProperties(n)
 	
 	algo,ok := n.Properties["algo"]
@@ -59,7 +60,7 @@ func (f *Fit)validateHash(n *fdt.Node, data []byte) (err error) {
 
 	fmt.Printf("Checking %s %v... ", algostr, value)
 	if algostr == "sha1" {
-		shasum := sha1.Sum(data)
+		shasum := sha1.Sum(i.Data)
 		shaslice := shasum[:]
 		if !bytes.Equal(value, shaslice) {
 			fmt.Printf("error, calculated %v!\n", shaslice)
@@ -71,7 +72,7 @@ func (f *Fit)validateHash(n *fdt.Node, data []byte) (err error) {
 
 	if algostr == "crc32" {
 		propsum := f.fdt.PropUint32(value)
-		calcsum := crc32.ChecksumIEEE(data)
+		calcsum := crc32.ChecksumIEEE(i.Data)
 		if calcsum != propsum {
 			fmt.Printf("incorrect, expected %d calculated %d", propsum, calcsum)
 			return fmt.Errorf("crc32 incorrect, expected %d calculated %d", propsum, calcsum)
@@ -81,7 +82,7 @@ func (f *Fit)validateHash(n *fdt.Node, data []byte) (err error) {
 	}
 
 	if algostr == "md5" {
-		md5sum := md5.Sum(data)
+		md5sum := md5.Sum(i.Data)
 		md5slice := md5sum[:]
 		if !bytes.Equal(value, md5slice) {
 			fmt.Printf("error, calculated %v!\n", md5slice)
@@ -95,15 +96,10 @@ func (f *Fit)validateHash(n *fdt.Node, data []byte) (err error) {
 	return
 }
 
-func (f *Fit)validateHashes(n *fdt.Node) (err error) {
-	data,ok := n.Properties["data"]
-	if !ok {
-		return errors.New("data property missing")
-	}
-
+func (f *Fit)validateHashes(n *fdt.Node,i *Image) (err error) {
 	for _, c := range n.Children {
 		if c.Name == "hash" || strings.HasPrefix(c.Name, "hash@") {
-			err = f.validateHash(c, data)
+			err = f.validateHash(c, i)
 			if err != nil {
 				return err
 			}
@@ -122,8 +118,9 @@ func (f *Fit)parseImage(n *fdt.Node, imageList *[]*Image, imageName string) {
 	i.Name = imageName
 	i.Type = f.fdt.PropString(node.Properties["type"])
 	i.Arch = f.fdt.PropString(node.Properties["arch"])
+	i.Data = node.Properties["data"]
 
-	err := f.validateHashes(node)
+	err := f.validateHashes(node, i)
 	if err != nil {
 		panic(err)
 	}
