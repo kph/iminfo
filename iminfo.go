@@ -19,10 +19,13 @@ type Fit struct {
 }
 
 type Image struct {
-	Name	string
-	Type	string
-	Arch	string
-	Data	[]byte
+	Name		string
+	Description	string
+	Type		string
+	Arch		string
+	Os		string
+	Compression	string
+	Data		[]byte
 }
 
 func debugDumpProperties(n *fdt.Node) {
@@ -116,8 +119,11 @@ func (f *Fit)parseImage(n *fdt.Node, imageList *[]*Image, imageName string) {
 
 	i := &Image{}
 	i.Name = imageName
+	i.Description = f.fdt.PropString(f.getProperty(node, "description"))
 	i.Type = f.fdt.PropString(f.getProperty(node, "type"))
 	i.Arch = f.fdt.PropString(f.getProperty(node, "arch"))
+	i.Os = f.fdt.PropString(node.Properties["os"])
+	i.Compression = f.fdt.PropString(f.getProperty(node, "compression"))
 	i.Data = f.getProperty(node, "data")
 
 	err := f.validateHashes(node, i)
@@ -175,7 +181,7 @@ func (f *Fit) parseConfiguration(whichconf string) (imageList []*Image, err erro
 
 func listImages(imageList []*Image) {
 	for _, image := range imageList {
-		fmt.Printf("listImages: %s:%s\n", image.Name, image.Type)
+		fmt.Printf("listImages: %s: Description=%s Type=%s Arch=%s OS=%s Compression=%s\n", image.Name, image.Description, image.Type, image.Arch, image.Os, image.Compression)
 	}
 }
 
