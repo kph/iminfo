@@ -194,19 +194,23 @@ func DumpRoot(t *fdt.Tree) {
 	debugDumpNode(t.RootNode)
 }
 
+func Parse(b []byte) (f *Fit) {
+	fit := Fit{}
+	fit.fdt = &fdt.Tree{Debug: false, IsLittleEndian: false}
+	err := fit.fdt.Parse(b)
+	if err != nil {
+		panic(err)
+	}
+	return &fit
+}
+
 func main() {
 	b, err := ioutil.ReadFile(os.Args[1])
 	if err != nil {
 		panic(err)
 	}
 
-	fit := Fit{}
-	fit.fdt = &fdt.Tree{Debug: false, IsLittleEndian: false}
-	err = fit.fdt.Parse(b)
-
-	if err != nil {
-		panic(err)
-	}
+	fit := Parse(b)
 
 	DumpRoot(fit.fdt)
 
