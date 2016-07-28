@@ -4,7 +4,6 @@ package main
 import (
 	"bytes"
 	"hash/crc32"
-	"errors"
 	"github.com/platinasystems/fdt"
 	"fmt"
 	"io/ioutil"
@@ -20,6 +19,7 @@ type Fit struct {
 	Description	string
 	AddressCells	uint32
 	TimeStamp	time.Time
+	DefaultConfig	string
 	Configs		map[string]*Config
 }
 
@@ -132,16 +132,6 @@ func (f *Fit) parseConfiguration(whichconf string) (imageList []*Image, err erro
 	conf := f.fdt.RootNode.Children["configurations"]
 	images := f.fdt.RootNode.Children["images"]
 
-	if (whichconf == "") {
-		def, ok := conf.Properties["default"]
-
-		if !ok {
-			return nil, errors.New("Can't find default node")
-		}
-
-		whichconf = f.fdt.PropString(def)
-	}
-
 	fmt.Printf("parseConfiguration %s: %q\n", conf.Name, whichconf)
 
 	conf,ok := conf.Children[whichconf]
@@ -170,22 +160,6 @@ func (f *Fit) parseConfiguration(whichconf string) (imageList []*Image, err erro
 	return imageList, nil
 }
 
-func (f *Fit)parseConfigurations() {
-	conf := f.fdt.RootNode.Children["configurations"]
-
-	for _, c := range conf.Children {
-		if c.Name == "conf" || strings.HasPrefix(c.Name, "conf@") {
-			cfg := Config{}
-			imageList, err := f.parseConfiguration(c.Name)
-			if err != nil {
-				panic(err)
-			}
-			cfg.imageList = imageList
-			f.Configs[c.Name] = &cfg
-		}
-	}
-}
-
 func listImages(imageList []*Image) {
 	for _, image := range imageList {
 		fmt.Printf("listImages: %s: Description=%s Type=%s Arch=%s OS=%s Compression=%s\n", image.Name, image.Description, image.Type, image.Arch, image.Os, image.Compression)
@@ -206,7 +180,21 @@ func Parse(b []byte) (f *Fit) {
 
 	fit.Configs = make(map[string]*Config)
 
-	fit.parseConfigurations()
+	conf := fit.fdt.RootNode.Children["configurations"]
+
+	fit.DefaultConfig = fit.fdt.PropString(fit.getProperty(conf, "default"))
+
+	for _, c := range conf.Children {
+		if c.Name == "conf" || strings.HasPrefix(c.Name, "conf@") {
+			cfg := Config{}
+			imageList, err := fit.parseConfiguration(c.Name)
+			if err != nil {
+				panic(err)
+			}
+			cfg.imageList = imageList
+			fit.Configs[c.Name] = &cfg
+		}
+	}
 
 	return &fit
 }
