@@ -20,6 +20,12 @@ type Fit struct {
 	Description	string
 	AddressCells	uint32
 	TimeStamp	time.Time
+	Configs		map[string]*Config
+}
+
+type Config struct {
+	Description	string
+	imageList	[]*Image
 }
 
 type Image struct {
@@ -183,6 +189,22 @@ func (f *Fit) parseConfiguration(whichconf string) (imageList []*Image, err erro
 	return imageList, nil
 }
 
+func (f *Fit)parseConfigurations() {
+	conf := f.fdt.RootNode.Children["configurations"]
+
+	for _, c := range conf.Children {
+		if c.Name == "conf" || strings.HasPrefix(c.Name, "conf@") {
+			cfg := Config{}
+			imageList, err := f.parseConfiguration(c.Name)
+			if err != nil {
+				panic(err)
+			}
+			cfg.imageList = imageList
+			f.Configs[c.Name] = &cfg
+		}
+	}
+}
+
 func listImages(imageList []*Image) {
 	for _, image := range imageList {
 		fmt.Printf("listImages: %s: Description=%s Type=%s Arch=%s OS=%s Compression=%s\n", image.Name, image.Description, image.Type, image.Arch, image.Os, image.Compression)
@@ -201,6 +223,10 @@ func Parse(b []byte) (f *Fit) {
 	fit.AddressCells = fit.fdt.PropUint32(fit.getProperty(fit.fdt.RootNode, "#address-cells"))
 	fit.TimeStamp = time.Unix(int64(fit.fdt.PropUint32(fit.getProperty(fit.fdt.RootNode, "timestamp"))), 0)
 
+	fit.Configs = make(map[string]*Config)
+
+	fit.parseConfigurations()
+
 	return &fit
 }
 
@@ -215,9 +241,10 @@ func main() {
 
 	fmt.Printf("Description = %s\nAddressCells = %d\nTimeStamp = %s\n", fit.Description, fit.AddressCells, fit.TimeStamp)
 
-	imageList, err := fit.parseConfiguration("")
-		
-	listImages(imageList)
+	for name, cfg := range fit.Configs {
+		fmt.Printf("Configuration %s:%s\n", name, (*cfg).Description)
+		listImages(cfg.imageList)
+	}
 
 	fit.fdt.MatchNode("configurations", debugDumpNode)
 
