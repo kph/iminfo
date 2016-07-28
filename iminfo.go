@@ -189,11 +189,6 @@ func listImages(imageList []*Image) {
 	}
 }
 
-// DumpRoot blah blah blah.
-func DumpRoot(t *fdt.Tree) {
-	debugDumpNode(t.RootNode)
-}
-
 func Parse(b []byte) (f *Fit) {
 	fit := Fit{}
 	fit.fdt = &fdt.Tree{Debug: false, IsLittleEndian: false}
@@ -211,8 +206,6 @@ func main() {
 	}
 
 	fit := Parse(b)
-
-	DumpRoot(fit.fdt)
 
 	fit.Description = fit.fdt.PropString(fit.getProperty(fit.fdt.RootNode, "description"))
 	fit.AddressCells = fit.fdt.PropUint32(fit.getProperty(fit.fdt.RootNode, "#address-cells"))
