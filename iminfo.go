@@ -44,17 +44,6 @@ func debugDumpProperties(n *fdt.Node) {
 	}
 }
 
-func debugDumpNode(n *fdt.Node) {
-
-	debugDumpProperties(n)
-
-	for _, c := range n.Children {
-		if strings.HasPrefix(c.Name, "conf") {
-			debugDumpProperties(c)
-		}
-	}
-}
-
 func (f *Fit)getProperty(n *fdt.Node, propName string) ([]byte) {
 	if val, ok := n.Properties[propName]; ok {
 		return val
@@ -245,8 +234,6 @@ func main() {
 		fmt.Printf("Configuration %s:%s\n", name, (*cfg).Description)
 		listImages(cfg.imageList)
 	}
-
-	fit.fdt.MatchNode("configurations", debugDumpNode)
 
 	fmt.Printf("Hello Universe!\n")
 }
