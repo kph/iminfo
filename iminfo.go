@@ -196,6 +196,11 @@ func Parse(b []byte) (f *Fit) {
 	if err != nil {
 		panic(err)
 	}
+
+	fit.Description = fit.fdt.PropString(fit.getProperty(fit.fdt.RootNode, "description"))
+	fit.AddressCells = fit.fdt.PropUint32(fit.getProperty(fit.fdt.RootNode, "#address-cells"))
+	fit.TimeStamp = time.Unix(int64(fit.fdt.PropUint32(fit.getProperty(fit.fdt.RootNode, "timestamp"))), 0)
+
 	return &fit
 }
 
@@ -207,9 +212,6 @@ func main() {
 
 	fit := Parse(b)
 
-	fit.Description = fit.fdt.PropString(fit.getProperty(fit.fdt.RootNode, "description"))
-	fit.AddressCells = fit.fdt.PropUint32(fit.getProperty(fit.fdt.RootNode, "#address-cells"))
-	fit.TimeStamp = time.Unix(int64(fit.fdt.PropUint32(fit.getProperty(fit.fdt.RootNode, "timestamp"))), 0)
 
 	fmt.Printf("Description = %s\nAddressCells = %d\nTimeStamp = %s\n", fit.Description, fit.AddressCells, fit.TimeStamp)
 
