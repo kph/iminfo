@@ -20,6 +20,7 @@ type Fit struct {
 	AddressCells	uint32
 	TimeStamp	time.Time
 	DefaultConfig	string
+	Images		map[string]*Image
 	Configs		map[string]*Config
 }
 
@@ -178,9 +179,33 @@ func Parse(b []byte) (f *Fit) {
 	fit.AddressCells = fit.fdt.PropUint32(fit.getProperty(fit.fdt.RootNode, "#address-cells"))
 	fit.TimeStamp = time.Unix(int64(fit.fdt.PropUint32(fit.getProperty(fit.fdt.RootNode, "timestamp"))), 0)
 
-	fit.Configs = make(map[string]*Config)
+	images := fit.fdt.RootNode.Children["images"]
+	fit.Images = make(map[string]*Image)
 
+	for _, image := range images.Children {
+		fmt.Printf("parseImages %s\n", image.Name)
+
+		i := Image{}
+		i.Name = image.Name
+		i.Description = fit.fdt.PropString(fit.getProperty(image, "description"))
+		i.Type = fit.fdt.PropString(fit.getProperty(image, "type"))
+		i.Arch = fit.fdt.PropString(fit.getProperty(image, "arch"))
+		i.Os = fit.fdt.PropString(image.Properties["os"])
+		i.Compression = fit.fdt.PropString(fit.getProperty(image, "compression"))
+		i.Data = fit.getProperty(image, "data")
+
+		err := fit.validateHashes(image, &i)
+		if err != nil {
+			panic(err)
+		}
+		//i.Load = image.Properties["load"]
+		//i.Entry = image.Properties["entry"]
+		//i.Len = len(image.Properties["data"])
+		fit.Images[image.Name] = &i;
+	}
+	
 	conf := fit.fdt.RootNode.Children["configurations"]
+	fit.Configs = make(map[string]*Config)
 
 	fit.DefaultConfig = fit.fdt.PropString(fit.getProperty(conf, "default"))
 
