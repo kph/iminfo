@@ -12,10 +12,14 @@ import (
 	"os"
 	"crypto/sha1"
 	"strings"
+	"time"
 )
 
 type Fit struct {
-	fdt	*fdt.Tree
+	fdt		*fdt.Tree
+	Description	string
+	AddressCells	uint32
+	TimeStamp	time.Time
 }
 
 type Image struct {
@@ -205,6 +209,12 @@ func main() {
 	}
 
 	DumpRoot(fit.fdt)
+
+	fit.Description = fit.fdt.PropString(fit.getProperty(fit.fdt.RootNode, "description"))
+	fit.AddressCells = fit.fdt.PropUint32(fit.getProperty(fit.fdt.RootNode, "#address-cells"))
+	fit.TimeStamp = time.Unix(int64(fit.fdt.PropUint32(fit.getProperty(fit.fdt.RootNode, "timestamp"))), 0)
+
+	fmt.Printf("Description = %s\nAddressCells = %d\nTimeStamp = %s\n", fit.Description, fit.AddressCells, fit.TimeStamp)
 
 	imageList, err := fit.parseConfiguration("")
 		
