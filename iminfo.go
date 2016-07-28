@@ -38,12 +38,6 @@ type Image struct {
 	Data		[]byte
 }
 
-func debugDumpProperties(n *fdt.Node) {
-	for name, value := range n.Properties {
-		fmt.Printf("[DEBUG]%s: %s = %q\n", n.Name, name, value)
-	}
-}
-
 func (f *Fit)getProperty(n *fdt.Node, propName string) ([]byte) {
 	if val, ok := n.Properties[propName]; ok {
 		return val
@@ -54,8 +48,6 @@ func (f *Fit)getProperty(n *fdt.Node, propName string) ([]byte) {
 
 // validateHash takes a hash node, and attempts to validate it. It takes
 func (f *Fit)validateHash(n *fdt.Node, i *Image) (err error) {
-	debugDumpProperties(n)
-	
 	algo := f.getProperty(n, "algo")
 	value := f.getProperty(n, "value")
 	algostr := f.fdt.PropString(algo)
@@ -226,7 +218,6 @@ func main() {
 	}
 
 	fit := Parse(b)
-
 
 	fmt.Printf("Description = %s\nAddressCells = %d\nTimeStamp = %s\n", fit.Description, fit.AddressCells, fit.TimeStamp)
 
