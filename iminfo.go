@@ -57,7 +57,7 @@ func (f *Fit)validateHash(n *fdt.Node, i *Image) (err error) {
 	value := f.getProperty(n, "value")
 	algostr := f.fdt.PropString(algo)
 
-	fmt.Printf("Checking %s %v... ", algostr, value)
+	fmt.Printf("Checking %s:%s %v... ", i.Name, algostr, value)
 	if algostr == "sha1" {
 		shasum := sha1.Sum(i.Data)
 		shaslice := shasum[:]
@@ -181,9 +181,12 @@ func Parse(b []byte) (f *Fit) {
 		if err != nil {
 			panic(err)
 		}
-		//i.Load = image.Properties["load"]
-		//i.Entry = image.Properties["entry"]
-		//i.Len = len(image.Properties["data"])
+		load := fit.fdt.PropUint32Slice(image.Properties["load"])
+		entry := fit.fdt.PropUint32Slice(image.Properties["entry"])
+
+		if len(load) != 0 {
+			fmt.Printf("image %s: load=%x entry=%x len=%x\n", image.Name, load[0], entry[0], len(i.Data))
+		}
 		fit.Images[image.Name] = &i;
 	}
 	
