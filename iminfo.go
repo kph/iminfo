@@ -26,7 +26,7 @@ type Fit struct {
 
 type Config struct {
 	Description	string
-	imageList	[]*Image
+	imageList	[]*ImageLoad
 }
 
 type Image struct {
@@ -37,6 +37,10 @@ type Image struct {
 	Os		string
 	Compression	string
 	Data		[]byte
+}
+
+type ImageLoad struct {
+	Image		*Image
 }
 
 func (f *Fit)getProperty(n *fdt.Node, propName string) ([]byte) {
@@ -103,35 +107,16 @@ func (f *Fit)validateHashes(n *fdt.Node,i *Image) (err error) {
 	return nil
 }
 
-func (f *Fit)parseImage(n *fdt.Node, imageList *[]*Image, imageName string) {
-	node,ok := n.Children[imageName]
-	if !ok {
-		return
-	}
+func (f *Fit)parseImage(imageList *[]*ImageLoad, imageName string) {
+	il := &ImageLoad{}
 
-	i := &Image{}
-	i.Name = imageName
-	i.Description = f.fdt.PropString(f.getProperty(node, "description"))
-	i.Type = f.fdt.PropString(f.getProperty(node, "type"))
-	i.Arch = f.fdt.PropString(f.getProperty(node, "arch"))
-	i.Os = f.fdt.PropString(node.Properties["os"])
-	i.Compression = f.fdt.PropString(f.getProperty(node, "compression"))
-	i.Data = f.getProperty(node, "data")
+	il.Image = f.Images[imageName]
 
-	err := f.validateHashes(node, i)
-	if err != nil {
-		panic(err)
-	}
-	//i.Load = node.Properties["load"]
-	//i.Entry = node.Properties["entry"]
-	//i.Len = len(node.Properties["data"])
-
-	*imageList = append(*imageList, i)
+	*imageList = append(*imageList, il)
 }
 
-func (f *Fit) parseConfiguration(whichconf string) (imageList []*Image, err error) {
+func (f *Fit) parseConfiguration(whichconf string) (imageList []*ImageLoad, err error) {
 	conf := f.fdt.RootNode.Children["configurations"]
-	images := f.fdt.RootNode.Children["images"]
 
 	fmt.Printf("parseConfiguration %s: %q\n", conf.Name, whichconf)
 
@@ -146,7 +131,7 @@ func (f *Fit) parseConfiguration(whichconf string) (imageList []*Image, err erro
 		fmt.Printf("parseConfiguration %s: %s\n", whichconf, f.fdt.PropString(description))
 	}
 
-	imageList = []*Image{}
+	imageList = []*ImageLoad{}
 
 	kernel := f.fdt.PropString(conf.Properties["kernel"])
 	fdt := f.fdt.PropString(conf.Properties["fdt"])
@@ -154,16 +139,16 @@ func (f *Fit) parseConfiguration(whichconf string) (imageList []*Image, err erro
 
 	fmt.Printf("parseConfiguration kernel=%s fdt=%s ramdisk=%s\n", kernel, fdt, ramdisk)
 
-	f.parseImage(images, &imageList, kernel)
-	f.parseImage(images, &imageList, fdt)
-	f.parseImage(images, &imageList, ramdisk)
+	f.parseImage(&imageList, kernel)
+	f.parseImage(&imageList, fdt)
+	f.parseImage(&imageList, ramdisk)
 
 	return imageList, nil
 }
 
-func listImages(imageList []*Image) {
+func listImages(imageList []*ImageLoad) {
 	for _, image := range imageList {
-		fmt.Printf("listImages: %s: Description=%s Type=%s Arch=%s OS=%s Compression=%s\n", image.Name, image.Description, image.Type, image.Arch, image.Os, image.Compression)
+		fmt.Printf("listImages: %s: Description=%s Type=%s Arch=%s OS=%s Compression=%s\n", image.Image.Name, image.Image.Description, image.Image.Type, image.Image.Arch, image.Image.Os, image.Image.Compression)
 	}
 }
 
@@ -183,8 +168,6 @@ func Parse(b []byte) (f *Fit) {
 	fit.Images = make(map[string]*Image)
 
 	for _, image := range images.Children {
-		fmt.Printf("parseImages %s\n", image.Name)
-
 		i := Image{}
 		i.Name = image.Name
 		i.Description = fit.fdt.PropString(fit.getProperty(image, "description"))
