@@ -3,50 +3,50 @@ package main
 
 import (
 	"bytes"
-	"hash/crc32"
-	"github.com/platinasystems/fdt"
-	"fmt"
-	"io/ioutil"
 	"crypto/md5"
-	"os"
 	"crypto/sha1"
+	"fmt"
+	"github.com/platinasystems/fdt"
+	"hash/crc32"
+	"io/ioutil"
+	"os"
 	"strings"
 	"time"
 )
 
 type Fit struct {
-	fdt		*fdt.Tree
-	Description	string
-	AddressCells	uint32
-	TimeStamp	time.Time
-	DefaultConfig	string
-	Images		map[string]*Image
-	Configs		map[string]*Config
+	fdt           *fdt.Tree
+	Description   string
+	AddressCells  uint32
+	TimeStamp     time.Time
+	DefaultConfig string
+	Images        map[string]*Image
+	Configs       map[string]*Config
 }
 
 type Config struct {
-	Description	string
-	imageList	[]*ImageLoad
-	BaseAddr	uint64
-	NextAddr	uint64
+	Description string
+	imageList   []*ImageLoad
+	BaseAddr    uint64
+	NextAddr    uint64
 }
 
 type Image struct {
-	Name		string
-	Description	string
-	Type		string
-	Arch		string
-	Os		string
-	Compression	string
-	Data		[]byte
+	Name        string
+	Description string
+	Type        string
+	Arch        string
+	Os          string
+	Compression string
+	Data        []byte
 }
 
 type ImageLoad struct {
-	Image		*Image
-	LoadAddr	uint64
+	Image    *Image
+	LoadAddr uint64
 }
 
-func (f *Fit)getProperty(n *fdt.Node, propName string) ([]byte) {
+func (f *Fit) getProperty(n *fdt.Node, propName string) []byte {
 	if val, ok := n.Properties[propName]; ok {
 		return val
 	}
@@ -55,7 +55,7 @@ func (f *Fit)getProperty(n *fdt.Node, propName string) ([]byte) {
 }
 
 // validateHash takes a hash node, and attempts to validate it. It takes
-func (f *Fit)validateHash(n *fdt.Node, i *Image) (err error) {
+func (f *Fit) validateHash(n *fdt.Node, i *Image) (err error) {
 	algo := f.getProperty(n, "algo")
 	value := f.getProperty(n, "value")
 	algostr := f.fdt.PropString(algo)
@@ -98,7 +98,7 @@ func (f *Fit)validateHash(n *fdt.Node, i *Image) (err error) {
 	return
 }
 
-func (f *Fit)validateHashes(n *fdt.Node,i *Image) (err error) {
+func (f *Fit) validateHashes(n *fdt.Node, i *Image) (err error) {
 	for _, c := range n.Children {
 		if c.Name == "hash" || strings.HasPrefix(c.Name, "hash@") {
 			err = f.validateHash(c, i)
@@ -110,7 +110,7 @@ func (f *Fit)validateHashes(n *fdt.Node,i *Image) (err error) {
 	return nil
 }
 
-func (f *Fit)parseImage(cfg *Config, imageName string) {
+func (f *Fit) parseImage(cfg *Config, imageName string) {
 	il := &ImageLoad{}
 
 	il.Image = f.Images[imageName]
@@ -121,12 +121,12 @@ func (f *Fit)parseImage(cfg *Config, imageName string) {
 
 func (f *Fit) parseConfiguration(whichconf string) (err error) {
 	cfg := Config{}
-	
+
 	conf := f.fdt.RootNode.Children["configurations"]
 
 	fmt.Printf("parseConfiguration %s: %q\n", conf.Name, whichconf)
 
-	conf,ok := conf.Children[whichconf]
+	conf, ok := conf.Children[whichconf]
 
 	if !ok {
 		return fmt.Errorf("Can't find configuration %s", whichconf)
@@ -195,9 +195,9 @@ func Parse(b []byte) (f *Fit) {
 		if len(load) != 0 {
 			fmt.Printf("image %s: load=%x entry=%x len=%x\n", image.Name, load[0], entry[0], len(i.Data))
 		}
-		fit.Images[image.Name] = &i;
+		fit.Images[image.Name] = &i
 	}
-	
+
 	conf := fit.fdt.RootNode.Children["configurations"]
 	fit.Configs = make(map[string]*Config)
 
