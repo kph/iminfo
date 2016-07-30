@@ -27,6 +27,8 @@ type Fit struct {
 type Config struct {
 	Description	string
 	imageList	[]*ImageLoad
+	BaseAddr	uint64
+	NextAddr	uint64
 }
 
 type Image struct {
@@ -41,6 +43,7 @@ type Image struct {
 
 type ImageLoad struct {
 	Image		*Image
+	LoadAddr	uint64
 }
 
 func (f *Fit)getProperty(n *fdt.Node, propName string) ([]byte) {
@@ -107,15 +110,18 @@ func (f *Fit)validateHashes(n *fdt.Node,i *Image) (err error) {
 	return nil
 }
 
-func (f *Fit)parseImage(imageList *[]*ImageLoad, imageName string) {
+func (f *Fit)parseImage(cfg *Config, imageName string) {
 	il := &ImageLoad{}
 
 	il.Image = f.Images[imageName]
-
-	*imageList = append(*imageList, il)
+	il.LoadAddr = cfg.NextAddr
+	cfg.NextAddr = il.LoadAddr + uint64(len(il.Image.Data))
+	cfg.imageList = append(cfg.imageList, il)
 }
 
-func (f *Fit) parseConfiguration(whichconf string) (imageList []*ImageLoad, err error) {
+func (f *Fit) parseConfiguration(whichconf string) (err error) {
+	cfg := Config{}
+	
 	conf := f.fdt.RootNode.Children["configurations"]
 
 	fmt.Printf("parseConfiguration %s: %q\n", conf.Name, whichconf)
@@ -123,7 +129,7 @@ func (f *Fit) parseConfiguration(whichconf string) (imageList []*ImageLoad, err 
 	conf,ok := conf.Children[whichconf]
 
 	if !ok {
-		return nil, fmt.Errorf("Can't find configuration %s", whichconf)
+		return fmt.Errorf("Can't find configuration %s", whichconf)
 	}
 
 	description := conf.Properties["description"]
@@ -131,7 +137,7 @@ func (f *Fit) parseConfiguration(whichconf string) (imageList []*ImageLoad, err 
 		fmt.Printf("parseConfiguration %s: %s\n", whichconf, f.fdt.PropString(description))
 	}
 
-	imageList = []*ImageLoad{}
+	cfg.imageList = []*ImageLoad{}
 
 	kernel := f.fdt.PropString(conf.Properties["kernel"])
 	fdt := f.fdt.PropString(conf.Properties["fdt"])
@@ -139,16 +145,18 @@ func (f *Fit) parseConfiguration(whichconf string) (imageList []*ImageLoad, err 
 
 	fmt.Printf("parseConfiguration kernel=%s fdt=%s ramdisk=%s\n", kernel, fdt, ramdisk)
 
-	f.parseImage(&imageList, kernel)
-	f.parseImage(&imageList, fdt)
-	f.parseImage(&imageList, ramdisk)
+	f.parseImage(&cfg, kernel)
+	f.parseImage(&cfg, fdt)
+	f.parseImage(&cfg, ramdisk)
 
-	return imageList, nil
+	f.Configs[whichconf] = &cfg
+
+	return nil
 }
 
 func listImages(imageList []*ImageLoad) {
 	for _, image := range imageList {
-		fmt.Printf("listImages: %s: Description=%s Type=%s Arch=%s OS=%s Compression=%s\n", image.Image.Name, image.Image.Description, image.Image.Type, image.Image.Arch, image.Image.Os, image.Image.Compression)
+		fmt.Printf("listImages: %s: Description=%s Type=%s Arch=%s OS=%s Compression=%s LoadAddr=%x\n", image.Image.Name, image.Image.Description, image.Image.Type, image.Image.Arch, image.Image.Os, image.Image.Compression, image.LoadAddr)
 	}
 }
 
@@ -197,13 +205,10 @@ func Parse(b []byte) (f *Fit) {
 
 	for _, c := range conf.Children {
 		if c.Name == "conf" || strings.HasPrefix(c.Name, "conf@") {
-			cfg := Config{}
-			imageList, err := fit.parseConfiguration(c.Name)
+			err := fit.parseConfiguration(c.Name)
 			if err != nil {
 				panic(err)
 			}
-			cfg.imageList = imageList
-			fit.Configs[c.Name] = &cfg
 		}
 	}
 
